@@ -32,52 +32,57 @@ object App {
     val t1 = System.nanoTime
     try {
       // TODO process the sentiment data
-      val sentimentData: DataFrame = // ...
+      val sentimentData: DataFrame = spark.read.format("csv")
+        .option("header", "true")
+        .option("quote", "\"")
+        .option("escape", "\"")
+        .load("sentiment.csv")
+      sentimentData.show()
 
-      val tokenzier = // ...
+      val tokenzier = new Tokenizer().setInputCol("text").setOutputCol("words")
 
-      val hashingTF = // ...
-
-      val stringIndexer = // ...
-
-      val logisticRegression = // ...
-
-      val pipeline = // ...
-
-      val paramGrid: Array[ParamMap] = new ParamGridBuilder()
-        .addGrid(/* ... */)
-        .addGrid(/* ... */)
-        .build()
-
-      val cv = new TrainValidationSplit()
-        .setEstimator(pipeline)
-        .setEvaluator(new BinaryClassificationEvaluator().setLabelCol("label"))
-        .setEstimatorParamMaps(paramGrid)
-        .setTrainRatio(0.8)
-        .setParallelism(2)
-
-      val Array(trainingData: Dataset[Row], testData: Dataset[Row]) = sentimentData.randomSplit(Array(0.8, 0.2))
-
-      // Run cross-validation, and choose the best set of parameters.
-      val logisticModel: TrainValidationSplitModel = cv.fit(trainingData)
-
-      // val numFeatures: Int = logisticModel.bestModel.asInstanceOf[PipelineModel].stages(1).asInstanceOf[HashingTF].getNumFeatures
-      // val regParam: Double = logisticModel.bestModel.asInstanceOf[PipelineModel].stages(3).asInstanceOf[LogisticRegressionModel].getRegParam
-      // println(s"Number of features in the best model = $numFeatures")
-      // println(s"RegParam the best model = $regParam")
-
-      val predictions: DataFrame = logisticModel.transform(testData)
-      predictions.select("text", "label", "prediction", "probability").show()
-
-      val binaryClassificationEvaluator = new BinaryClassificationEvaluator()
-        .setLabelCol("label")
-        .setRawPredictionCol("prediction")
-
-      val accuracy: Double = binaryClassificationEvaluator.evaluate(predictions)
-      println(s"Accuracy of the test set is $accuracy")
-
-      val t2 = System.nanoTime
-      println(s"Applied sentiment analysis algorithm on input $inputfile in ${(t2 - t1) * 1E-9} seconds")
+      val hashingTF = new HashingTF().setInputCol("words").setOutputCol("features")
+//
+//      val stringIndexer = // ...
+//
+//      val logisticRegression = // ...
+//
+//      val pipeline = // ...
+//
+//      val paramGrid: Array[ParamMap] = new ParamGridBuilder()
+//        .addGrid(/* ... */)
+//        .addGrid(/* ... */)
+//        .build()
+//
+//      val cv = new TrainValidationSplit()
+//        .setEstimator(pipeline)
+//        .setEvaluator(new BinaryClassificationEvaluator().setLabelCol("label"))
+//        .setEstimatorParamMaps(paramGrid)
+//        .setTrainRatio(0.8)
+//        .setParallelism(2)
+//
+//      val Array(trainingData: Dataset[Row], testData: Dataset[Row]) = sentimentData.randomSplit(Array(0.8, 0.2))
+//
+//      // Run cross-validation, and choose the best set of parameters.
+//      val logisticModel: TrainValidationSplitModel = cv.fit(trainingData)
+//
+//      // val numFeatures: Int = logisticModel.bestModel.asInstanceOf[PipelineModel].stages(1).asInstanceOf[HashingTF].getNumFeatures
+//      // val regParam: Double = logisticModel.bestModel.asInstanceOf[PipelineModel].stages(3).asInstanceOf[LogisticRegressionModel].getRegParam
+//      // println(s"Number of features in the best model = $numFeatures")
+//      // println(s"RegParam the best model = $regParam")
+//
+//      val predictions: DataFrame = logisticModel.transform(testData)
+//      predictions.select("text", "label", "prediction", "probability").show()
+//
+//      val binaryClassificationEvaluator = new BinaryClassificationEvaluator()
+//        .setLabelCol("label")
+//        .setRawPredictionCol("prediction")
+//
+//      val accuracy: Double = binaryClassificationEvaluator.evaluate(predictions)
+//      println(s"Accuracy of the test set is $accuracy")
+//
+//      val t2 = System.nanoTime
+//      println(s"Applied sentiment analysis algorithm on input $inputfile in ${(t2 - t1) * 1E-9} seconds")
     } finally {
       spark.stop
     }
