@@ -1,15 +1,85 @@
 package edu.ucr.cs.cs167.cho102
 
-/**
- * @author ${user.name}
- */
-object App {
-  
-  def foo(x : Array[String]) = x.foldLeft("")((a,b) => a + b)
-  
-  def main(args : Array[String]) {
-    println( "Hello World!" )
-    println("concat arguments = " + foo(args))
-  }
+import org.apache.spark.SparkConf
+import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressionModel}
+import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
+import org.apache.spark.ml.feature.{HashingTF, StringIndexer, Tokenizer}
+import org.apache.spark.ml.param.ParamMap
+import org.apache.spark.ml.tuning.{ParamGridBuilder, TrainValidationSplit, TrainValidationSplitModel}
+import org.apache.spark.ml.{Pipeline, PipelineModel}
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 
+object App {
+
+  def main(args : Array[String]) {
+    if (args.length != 1) {
+      println("Usage <input file>")
+      println("  - <input file> path to a CSV file input")
+      sys.exit(0)
+    }
+    val inputfile = args(0)
+    val conf = new SparkConf
+    if (!conf.contains("spark.master"))
+      conf.setMaster("local[*]")
+    println(s"Using Spark master '${conf.get("spark.master")}'")
+
+    val spark = SparkSession
+      .builder()
+      .appName("CS167 Lab8")
+      .config(conf)
+      .getOrCreate()
+
+    val t1 = System.nanoTime
+    try {
+      // TODO process the sentiment data
+      val sentimentData: DataFrame = // ...
+
+      val tokenzier = // ...
+
+      val hashingTF = // ...
+
+      val stringIndexer = // ...
+
+      val logisticRegression = // ...
+
+      val pipeline = // ...
+
+      val paramGrid: Array[ParamMap] = new ParamGridBuilder()
+        .addGrid(/* ... */)
+        .addGrid(/* ... */)
+        .build()
+
+      val cv = new TrainValidationSplit()
+        .setEstimator(pipeline)
+        .setEvaluator(new BinaryClassificationEvaluator().setLabelCol("label"))
+        .setEstimatorParamMaps(paramGrid)
+        .setTrainRatio(0.8)
+        .setParallelism(2)
+
+      val Array(trainingData: Dataset[Row], testData: Dataset[Row]) = sentimentData.randomSplit(Array(0.8, 0.2))
+
+      // Run cross-validation, and choose the best set of parameters.
+      val logisticModel: TrainValidationSplitModel = cv.fit(trainingData)
+
+      // val numFeatures: Int = logisticModel.bestModel.asInstanceOf[PipelineModel].stages(1).asInstanceOf[HashingTF].getNumFeatures
+      // val regParam: Double = logisticModel.bestModel.asInstanceOf[PipelineModel].stages(3).asInstanceOf[LogisticRegressionModel].getRegParam
+      // println(s"Number of features in the best model = $numFeatures")
+      // println(s"RegParam the best model = $regParam")
+
+      val predictions: DataFrame = logisticModel.transform(testData)
+      predictions.select("text", "label", "prediction", "probability").show()
+
+      val binaryClassificationEvaluator = new BinaryClassificationEvaluator()
+        .setLabelCol("label")
+        .setRawPredictionCol("prediction")
+
+      val accuracy: Double = binaryClassificationEvaluator.evaluate(predictions)
+      println(s"Accuracy of the test set is $accuracy")
+
+      val t2 = System.nanoTime
+      println(s"Applied sentiment analysis algorithm on input $inputfile in ${(t2 - t1) * 1E-9} seconds")
+    } finally {
+      spark.stop
+    }
+  }
 }
